@@ -8,7 +8,7 @@ namespace DiscordRPCBridge_Wine
     /// <summary>
     /// Resolves the Discord IPC socket path on the host system.
     /// </summary>
-    public sealed class SocketResolver
+    internal sealed class SocketResolver
     {
         public Action<string>? LogCallback;
         public Action<string>? LogDebugCallback;
