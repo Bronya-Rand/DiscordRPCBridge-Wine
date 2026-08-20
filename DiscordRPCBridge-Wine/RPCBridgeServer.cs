@@ -29,11 +29,11 @@ namespace DiscordRPCBridge_Wine
         public async Task StopAsync()
         {
             if (cts == null) return;
-            await cts.CancelAsync();
+            await cts.CancelAsync().ConfigureAwait(false);
             if (runTask != null)
-                await runTask; // Wait for the server task to complete
+                await runTask.ConfigureAwait(false); // Wait for the server task to complete
         }
-        public async ValueTask DisposeAsync() => await StopAsync();
+        public async ValueTask DisposeAsync() => await StopAsync().ConfigureAwait(false);
 
         private async Task StartAsync(int port, CancellationToken token)
         {
@@ -55,7 +55,7 @@ namespace DiscordRPCBridge_Wine
                     try
                     {
                         // Wait for the client to connect
-                        tcpClient = await listener.AcceptTcpClientAsync(token);
+                        tcpClient = await listener.AcceptTcpClientAsync(token).ConfigureAwait(false);
                         OnDebug?.Invoke($"Client connected to bridge from {tcpClient.Client.RemoteEndPoint}");
 
                         // Find the Discord socket path (0-9)
@@ -82,7 +82,7 @@ namespace DiscordRPCBridge_Wine
                         // Connect to the Discord socket
                         var discordEndPoint = new UnixDomainSocketEndPoint(socketPath);
                         using var discordSocket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-                        await discordSocket.ConnectAsync(discordEndPoint, token);
+                        await discordSocket.ConnectAsync(discordEndPoint, token).ConfigureAwait(false);
                         OnInfo?.Invoke($"Connected to Discord socket at {socketPath} (pipe {connectedPipe})");
 
                         // Relay data between the client and the Discord socket
@@ -93,8 +93,8 @@ namespace DiscordRPCBridge_Wine
                         var clientToDiscord = tcpStream.CopyToAsync(unixStream, discordRelayCts.Token);
                         var discordToClient = unixStream.CopyToAsync(tcpStream, discordRelayCts.Token);
 
-                        await Task.WhenAny(clientToDiscord, discordToClient);
-                        await discordRelayCts.CancelAsync();
+                        await Task.WhenAny(clientToDiscord, discordToClient).ConfigureAwait(false);
+                        await discordRelayCts.CancelAsync().ConfigureAwait(false);
                     }
                     catch (OperationCanceledException) when (token.IsCancellationRequested)
                     {
