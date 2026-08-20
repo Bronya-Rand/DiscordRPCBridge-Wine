@@ -28,7 +28,13 @@ jobs:
         run: "dotnet build --configuration Release --no-restore"
       
       - name: "Pack RPC Bridge"
-        run: "dotnet pack --configuration Release --no-build --output output"
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]] 
+          then
+            dotnet pack --configuration Release --no-build --output output -p:PackageVersion=${GITHUB_REF_NAME}
+          else
+            dotnet pack --configuration Release --no-build --output output
+          fi
 
       - name: "Upload artifact"
         uses: actions/upload-artifact@v7
