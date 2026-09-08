@@ -31,19 +31,54 @@ jobs:
         run: |
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]] 
           then
-            dotnet pack --configuration Release --no-build --output output -p:PackageVersion=${GITHUB_REF_NAME}
+            dotnet pack DiscordRPCBridge-Wine/DiscordRPCBridge-Wine.csproj --configuration Release --no-build --output output -p:PackageVersion=${GITHUB_REF_NAME}
           else
-            dotnet pack --configuration Release --no-build --output output
+            dotnet pack DiscordRPCBridge-Wine/DiscordRPCBridge-Wine.csproj --configuration Release --no-build --output output
           fi
 
-      - name: "Upload artifact"
+      - name: "Build CLI Standalone Binaries"
+        run: |
+          mkdir -p output/binaries
+          TARGETS=("linux-x64" "osx-arm64")
+          for RID in "${TARGETS[@]}"; do
+            echo "Publishing for $RID..."
+            PUBLISH_DIR="publish/$RID"
+            VERSION_ARG=""
+            if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+              VERSION_ARG="-p:Version=${GITHUB_REF_NAME}"
+            fi
+
+            dotnet publish DiscordRPCBridge-Wine.Cli/DiscordRPCBridge-Wine.Cli.csproj \
+              --configuration Release \
+              --runtime "$RID" \
+              --self-contained \
+              -p:PublishSingleFile=true \
+              -p:PublishTrimmed=true \
+              $VERSION_ARG \
+              --output "$PUBLISH_DIR"
+
+            if [[ "$RID" == win-* ]]; then
+              zip -j "output/binaries/discord-rpc-bridge-$RID.zip" "$PUBLISH_DIR/discord-rpc-bridge.exe"
+            else
+              chmod +x "$PUBLISH_DIR/discord-rpc-bridge"
+              tar -czf "output/binaries/discord-rpc-bridge-$RID.tar.gz" -C "$PUBLISH_DIR" discord-rpc-bridge
+            fi
+          done
+
+      - name: "Upload NuGet Artifact"
         uses: actions/upload-artifact@v7
         with:
           name: nupkg
           path: output/*.nupkg
+
+      - name: "Upload CLI Binaries Artifact"
+        uses: actions/upload-artifact@v7
+        with:
+          name: binaries
+          path: output/binaries/*
         
   publish:
-    name: "Publish to NuGet and GitHub Packages"
+    name: "Publish to NuGet, GitHub Packages, and GitHub Release"
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
@@ -57,6 +92,11 @@ jobs:
         with:
           name: nupkg
           path: output
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: binaries
+          path: output/binaries
 
       - name: Login to NuGet
         uses: NuGet/login@v1
@@ -81,6 +121,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with: 
-          files: output/*.nupkg
+          files: |
+            output/*.nupkg
+            output/binaries/*
           generate_release_notes: true
             
