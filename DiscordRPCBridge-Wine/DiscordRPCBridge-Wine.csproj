@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <Title>Discord RPC Bridge for Wine</Title>
-    <Version>0.0.1</Version>
+    <Version>0.0.2</Version>
     <Authors>Bronya Rand</Authors>
     <Company>Bronya Rand</Company>
     <Description>A Discord Rich Presence relay bridge for Wine/CrossOver builds that don't suppor AF_UNIX.</Description>
